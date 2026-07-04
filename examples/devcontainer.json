@@ -1,0 +1,19 @@
+{
+  "name": "Projeto com XCoder",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/willfeerr/devcontainer-features/xcoder:1": {
+      "permission": "ask",
+      "autoStart": true,
+      "xcoderRef": "main",
+      "browserlessRequired": true
+    }
+  },
+  "containerEnv": {
+    "SKRBE_BRIDGE_URL": "${localEnv:SKRBE_BRIDGE_URL}",
+    "SKRBE_BRIDGE_TOKEN": "${localEnv:SKRBE_BRIDGE_TOKEN}",
+    "SKRBE_AGENT_ID": "${localEnv:SKRBE_AGENT_ID}",
+    "BROWSERLESS_URL": "${localEnv:BROWSERLESS_URL}",
+    "BROWSERLESS_TOKEN": "${localEnv:BROWSERLESS_TOKEN}"
+  }
+}
