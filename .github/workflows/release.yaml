@@ -2,6 +2,11 @@ name: Release Features
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/xcoder/devcontainer-feature.json"
+      - ".github/workflows/release.yaml"
 
 jobs:
   deploy:
