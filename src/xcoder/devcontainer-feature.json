@@ -31,8 +31,8 @@
     },
     "xcoderRef": {
       "type": "string",
-      "default": "main",
-      "description": "Branch, tag ou commit do repositório willfeerr/xcoder."
+      "default": "release/install-without-build",
+      "description": "Branch, tag ou commit instalável do repositório willfeerr/xcoder."
     },
     "browserlessRequired": {
       "type": "boolean",

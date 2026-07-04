@@ -4,7 +4,7 @@ set -eu
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PERMISSION="${PERMISSION:-ask}"
 AUTOSTART="${AUTOSTART:-true}"
-XCODERREF="${XCODERREF:-main}"
+XCODERREF="${XCODERREF:-release/install-without-build}"
 BROWSERLESSREQUIRED="${BROWSERLESSREQUIRED:-true}"
 
 case "$PERMISSION" in
@@ -57,7 +57,9 @@ fi
 
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-npm install --global --no-audit --no-fund "github:willfeerr/xcoder#${XCODERREF}"
+npm install --global --no-audit --no-fund \
+  "github:willfeerr/xcoder#${XCODERREF}" \
+  "playwright@1.61.1"
 
 GLOBAL_ROOT="$(npm root --global)"
 XCODER_ROOT="${GLOBAL_ROOT}/@skrbe/xcoder"
