@@ -12,20 +12,16 @@ case "$PERMISSION" in
   ask|auto-approve|full-control) ;;
   *) echo "[xcoder-feature] permission inválida: $PERMISSION" >&2; exit 1 ;;
 esac
-
 case "$AUTOSTART" in
   true|false) ;;
   *) echo "[xcoder-feature] autoStart deve ser true ou false." >&2; exit 1 ;;
 esac
-
 case "$BROWSERLESSREQUIRED" in
   true|false) ;;
   *) echo "[xcoder-feature] browserlessRequired deve ser true ou false." >&2; exit 1 ;;
 esac
 
-install_system_dependencies() {
-  if command -v git >/dev/null 2>&1; then return; fi
-
+if ! command -v git >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
     apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git ca-certificates
@@ -42,9 +38,7 @@ install_system_dependencies() {
     echo "[xcoder-feature] não foi possível instalar git nesta distribuição." >&2
     exit 1
   fi
-}
-
-install_system_dependencies
+fi
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   echo "[xcoder-feature] Node.js e npm são obrigatórios." >&2
@@ -62,7 +56,6 @@ git -C "$XCODER_ROOT" checkout -q --detach FETCH_HEAD
 
 if [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
   echo "[xcoder-feature] o ref $XCODERREF não contém dist/cli.js pré-compilado." >&2
-  echo "[xcoder-feature] use release/install-without-build ou outro ref publicável." >&2
   exit 1
 fi
 
@@ -73,7 +66,7 @@ npm install \
   --no-package-lock \
   --no-audit \
   --no-fund \
-  playwright@1.61.1
+  playwright@1.61.1 ws@8.18.3
 
 node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
@@ -97,10 +90,13 @@ install -m 0755 "$SCRIPT_DIR/xcoder-feature-stop.sh" /usr/local/bin/xcoder-featu
 
 test -L /usr/local/bin/xcoder
 test -x "$XCODER_ROOT/dist/cli.js"
-test -f "$XCODER_ROOT/node_modules/playwright/package.json"
 node --check "$XCODER_ROOT/dist/cli.js"
 node --check "$XCODER_ROOT/dist/browser-worker.js"
 node --check "$XCODER_ROOT/dist/browser-tools.js"
 node --check "$XCODER_ROOT/dist/browser-record-tool.js"
+(
+  cd "$XCODER_ROOT"
+  node --input-type=module -e "await import('playwright'); await import('ws')"
+)
 
 echo "[xcoder-feature] XCoder instalado em $XCODER_ROOT com permission=${PERMISSION}."

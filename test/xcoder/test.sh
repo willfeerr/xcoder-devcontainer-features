@@ -13,13 +13,18 @@ test -r /etc/xcoder/feature.env
 grep -q '^XCODER_DEFAULT_PERMISSION=' /etc/xcoder/feature.env
 grep -q '^XCODER_AUTO_START=' /etc/xcoder/feature.env
 
-GLOBAL_ROOT="$(npm root --global)"
-XCODER_ROOT="${GLOBAL_ROOT}/@skrbe/xcoder"
-test -d "$XCODER_ROOT"
-grep -q 'connectOverCDP' "$XCODER_ROOT/dist/browser-worker.js"
-grep -q 'BROWSERLESS_URL' "$XCODER_ROOT/dist/browser-worker.js"
+test -d /opt/xcoder
+test -x /opt/xcoder/dist/cli.js
+test -L /usr/local/bin/xcoder
+grep -q 'connectOverCDP' /opt/xcoder/dist/browser-worker.js
+grep -q 'BROWSERLESS_URL' /opt/xcoder/dist/browser-worker.js
 
-if find "$XCODER_ROOT" -type f -path '*/.local-browsers/*' | grep -q .; then
+(
+  cd /opt/xcoder
+  node --input-type=module -e "await import('playwright'); await import('ws')"
+)
+
+if find /opt/xcoder -type f -path '*/.local-browsers/*' | grep -q .; then
   echo "Navegador local do Playwright encontrado." >&2
   exit 1
 fi
