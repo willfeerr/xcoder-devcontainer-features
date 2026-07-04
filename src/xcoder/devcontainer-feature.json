@@ -1,6 +1,6 @@
 {
   "id": "xcoder",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Skrbe XCoder",
   "description": "Instala o XCoder com cliente Playwright conectado a um Browserless remoto.",
   "documentationURL": "https://github.com/willfeerr/devcontainer-features/tree/main/src/xcoder",
@@ -31,8 +31,8 @@
     },
     "xcoderRef": {
       "type": "string",
-      "default": "release/install-without-build",
-      "description": "Branch, tag ou commit instalável do repositório willfeerr/xcoder."
+      "default": "main",
+      "description": "Branch, tag ou commit do repositório willfeerr/xcoder. Refs sem dist são compilados durante a instalação."
     },
     "browserlessRequired": {
       "type": "boolean",
