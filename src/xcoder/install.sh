@@ -9,26 +9,17 @@ BROWSERLESSREQUIRED="${BROWSERLESSREQUIRED:-true}"
 
 case "$PERMISSION" in
   ask|auto-approve|full-control) ;;
-  *)
-    echo "[xcoder-feature] permission inválida: $PERMISSION" >&2
-    exit 1
-    ;;
+  *) echo "[xcoder-feature] permission inválida: $PERMISSION" >&2; exit 1 ;;
 esac
 
 case "$AUTOSTART" in
   true|false) ;;
-  *)
-    echo "[xcoder-feature] autoStart deve ser true ou false." >&2
-    exit 1
-    ;;
+  *) echo "[xcoder-feature] autoStart deve ser true ou false." >&2; exit 1 ;;
 esac
 
 case "$BROWSERLESSREQUIRED" in
   true|false) ;;
-  *)
-    echo "[xcoder-feature] browserlessRequired deve ser true ou false." >&2
-    exit 1
-    ;;
+  *) echo "[xcoder-feature] browserlessRequired deve ser true ou false." >&2; exit 1 ;;
 esac
 
 if ! command -v git >/dev/null 2>&1; then
@@ -61,44 +52,51 @@ npm install --global --no-audit --no-fund \
   "github:willfeerr/xcoder#${XCODERREF}" \
   "playwright@1.61.1"
 
-if ! command -v xcoder >/dev/null 2>&1; then
-  echo "[xcoder-feature] comando xcoder não foi instalado." >&2
-  exit 1
-fi
-
-XCODER_BIN="$(command -v xcoder)"
-XCODER_ROOT="$(node - "$XCODER_BIN" <<'NODE'
+GLOBAL_ROOT="$(npm root --global)"
+XCODER_ROOT="$(node - "$GLOBAL_ROOT" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
-const binary = process.argv[2];
-let current = path.dirname(fs.realpathSync(binary));
+const root = process.argv[2];
+const queue = [{ directory: root, depth: 0 }];
 
-while (true) {
-  const packageFile = path.join(current, 'package.json');
+while (queue.length > 0) {
+  const { directory, depth } = queue.shift();
+  const packageFile = path.join(directory, 'package.json');
+
   if (fs.existsSync(packageFile)) {
-    const pkg = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
-    if (pkg.name === '@skrbe/xcoder') {
-      process.stdout.write(current);
-      process.exit(0);
-    }
+    try {
+      const pkg = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+      if (pkg.name === '@skrbe/xcoder') {
+        process.stdout.write(directory);
+        process.exit(0);
+      }
+    } catch {}
   }
 
-  const parent = path.dirname(current);
-  if (parent === current) break;
-  current = parent;
+  if (depth >= 4) continue;
+
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === '.bin') continue;
+    queue.push({ directory: path.join(directory, entry.name), depth: depth + 1 });
+  }
 }
 
 process.exit(1);
 NODE
 )"
 
-if [ -z "$XCODER_ROOT" ] || [ ! -d "$XCODER_ROOT/dist" ]; then
-  echo "[xcoder-feature] não foi possível localizar a raiz instalada do @skrbe/xcoder a partir de $XCODER_BIN" >&2
+if [ -z "$XCODER_ROOT" ] || [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
+  echo "[xcoder-feature] @skrbe/xcoder não localizado dentro de $GLOBAL_ROOT" >&2
+  find "$GLOBAL_ROOT" -maxdepth 3 -name package.json -print >&2 || true
   exit 1
 fi
 
 echo "[xcoder-feature] XCoder localizado em $XCODER_ROOT"
+
+chmod 0755 "$XCODER_ROOT/dist/cli.js"
+ln -sf "$XCODER_ROOT/dist/cli.js" /usr/local/bin/xcoder
+ln -sf "$XCODER_ROOT/dist/cli.js" /usr/local/bin/skrbe-dev-agent
 
 node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
@@ -115,6 +113,8 @@ install -m 0755 "$SCRIPT_DIR/xcoder-feature-start.sh" /usr/local/bin/xcoder-feat
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-status.sh" /usr/local/bin/xcoder-feature-status
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-stop.sh" /usr/local/bin/xcoder-feature-stop
 
+command -v xcoder >/dev/null 2>&1
+node --check "$XCODER_ROOT/dist/cli.js"
 node --check "$XCODER_ROOT/dist/browser-worker.js"
 node --check "$XCODER_ROOT/dist/browser-tools.js"
 node --check "$XCODER_ROOT/dist/browser-record-tool.js"
