@@ -14,6 +14,9 @@ grep -q '^XCODER_DEFAULT_PERMISSION=' /etc/xcoder/feature.env
 grep -q '^XCODER_AUTO_START=' /etc/xcoder/feature.env
 
 test -d /opt/xcoder
+test -d /opt/xcoder-runtime/node_modules/playwright
+test -d /opt/xcoder-runtime/node_modules/ws
+test -L /opt/xcoder/node_modules
 test -x /opt/xcoder/dist/cli.js
 test -L /usr/local/bin/xcoder
 grep -q 'connectOverCDP' /opt/xcoder/dist/browser-worker.js
@@ -24,7 +27,7 @@ grep -q 'BROWSERLESS_URL' /opt/xcoder/dist/browser-worker.js
   node --input-type=module -e "await import('playwright'); await import('ws')"
 )
 
-if find /opt/xcoder -type f -path '*/.local-browsers/*' | grep -q .; then
+if find /opt/xcoder-runtime -type f -path '*/.local-browsers/*' | grep -q .; then
   echo "Navegador local do Playwright encontrado." >&2
   exit 1
 fi
