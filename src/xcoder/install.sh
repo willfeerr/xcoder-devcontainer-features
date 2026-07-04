@@ -7,6 +7,7 @@ AUTOSTART="${AUTOSTART:-true}"
 XCODERREF="${XCODERREF:-release/install-without-build}"
 BROWSERLESSREQUIRED="${BROWSERLESSREQUIRED:-true}"
 XCODER_ROOT="/opt/xcoder"
+RUNTIME_ROOT="/opt/xcoder-runtime"
 
 case "$PERMISSION" in
   ask|auto-approve|full-control) ;;
@@ -47,8 +48,9 @@ fi
 
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-rm -rf "$XCODER_ROOT"
-install -d -m 0755 "$XCODER_ROOT"
+rm -rf "$XCODER_ROOT" "$RUNTIME_ROOT"
+install -d -m 0755 "$XCODER_ROOT" "$RUNTIME_ROOT"
+
 git init -q "$XCODER_ROOT"
 git -C "$XCODER_ROOT" remote add origin https://github.com/willfeerr/xcoder.git
 git -C "$XCODER_ROOT" fetch -q --depth 1 origin "$XCODERREF"
@@ -59,14 +61,35 @@ if [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
   exit 1
 fi
 
-npm install \
-  --prefix "$XCODER_ROOT" \
-  --omit=dev \
-  --ignore-scripts \
-  --no-package-lock \
-  --no-audit \
-  --no-fund \
-  playwright@1.61.1 ws@8.18.3
+cat > "$RUNTIME_ROOT/package.json" <<'EOF'
+{
+  "name": "xcoder-runtime",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.61.1",
+    "ws": "8.18.3"
+  }
+}
+EOF
+
+(
+  cd "$RUNTIME_ROOT"
+  npm install --omit=dev --ignore-scripts --no-package-lock --no-audit --no-fund
+)
+
+[ -d "$RUNTIME_ROOT/node_modules/playwright" ] || {
+  echo "[xcoder-feature] playwright não foi instalado." >&2
+  exit 1
+}
+
+[ -d "$RUNTIME_ROOT/node_modules/ws" ] || {
+  echo "[xcoder-feature] ws não foi instalado." >&2
+  exit 1
+}
+
+rm -rf "$XCODER_ROOT/node_modules"
+ln -s "$RUNTIME_ROOT/node_modules" "$XCODER_ROOT/node_modules"
 
 node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
@@ -89,6 +112,7 @@ install -m 0755 "$SCRIPT_DIR/xcoder-feature-status.sh" /usr/local/bin/xcoder-fea
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-stop.sh" /usr/local/bin/xcoder-feature-stop
 
 test -L /usr/local/bin/xcoder
+test -L "$XCODER_ROOT/node_modules"
 test -x "$XCODER_ROOT/dist/cli.js"
 node --check "$XCODER_ROOT/dist/cli.js"
 node --check "$XCODER_ROOT/dist/browser-worker.js"
