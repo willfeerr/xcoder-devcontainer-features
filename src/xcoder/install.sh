@@ -61,13 +61,44 @@ npm install --global --no-audit --no-fund \
   "github:willfeerr/xcoder#${XCODERREF}" \
   "playwright@1.61.1"
 
-GLOBAL_ROOT="$(npm root --global)"
-XCODER_ROOT="${GLOBAL_ROOT}/@skrbe/xcoder"
-
-if [ ! -d "$XCODER_ROOT" ]; then
-  echo "[xcoder-feature] pacote global @skrbe/xcoder não encontrado em $XCODER_ROOT" >&2
+if ! command -v xcoder >/dev/null 2>&1; then
+  echo "[xcoder-feature] comando xcoder não foi instalado." >&2
   exit 1
 fi
+
+XCODER_BIN="$(command -v xcoder)"
+XCODER_ROOT="$(node - "$XCODER_BIN" <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
+
+const binary = process.argv[2];
+let current = path.dirname(fs.realpathSync(binary));
+
+while (true) {
+  const packageFile = path.join(current, 'package.json');
+  if (fs.existsSync(packageFile)) {
+    const pkg = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+    if (pkg.name === '@skrbe/xcoder') {
+      process.stdout.write(current);
+      process.exit(0);
+    }
+  }
+
+  const parent = path.dirname(current);
+  if (parent === current) break;
+  current = parent;
+}
+
+process.exit(1);
+NODE
+)"
+
+if [ -z "$XCODER_ROOT" ] || [ ! -d "$XCODER_ROOT/dist" ]; then
+  echo "[xcoder-feature] não foi possível localizar a raiz instalada do @skrbe/xcoder a partir de $XCODER_BIN" >&2
+  exit 1
+fi
+
+echo "[xcoder-feature] XCoder localizado em $XCODER_ROOT"
 
 node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
@@ -83,11 +114,6 @@ install -m 0755 "$SCRIPT_DIR/xcoder-feature-autostart.sh" /usr/local/bin/xcoder-
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-start.sh" /usr/local/bin/xcoder-feature-start
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-status.sh" /usr/local/bin/xcoder-feature-status
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-stop.sh" /usr/local/bin/xcoder-feature-stop
-
-if ! command -v xcoder >/dev/null 2>&1; then
-  echo "[xcoder-feature] comando xcoder não foi instalado." >&2
-  exit 1
-fi
 
 node --check "$XCODER_ROOT/dist/browser-worker.js"
 node --check "$XCODER_ROOT/dist/browser-tools.js"
