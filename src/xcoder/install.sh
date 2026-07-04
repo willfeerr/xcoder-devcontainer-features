@@ -24,9 +24,7 @@ case "$BROWSERLESSREQUIRED" in
 esac
 
 install_system_dependencies() {
-  if command -v git >/dev/null 2>&1; then
-    return
-  fi
+  if command -v git >/dev/null 2>&1; then return; fi
 
   if command -v apt-get >/dev/null 2>&1; then
     apt-get update
@@ -80,6 +78,7 @@ npm install \
 node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
 chmod 0755 "$XCODER_ROOT/dist/cli.js"
+install -d -m 0755 /usr/local/bin
 ln -sf "$XCODER_ROOT/dist/cli.js" /usr/local/bin/xcoder
 ln -sf "$XCODER_ROOT/dist/cli.js" /usr/local/bin/skrbe-dev-agent
 
@@ -96,11 +95,12 @@ install -m 0755 "$SCRIPT_DIR/xcoder-feature-start.sh" /usr/local/bin/xcoder-feat
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-status.sh" /usr/local/bin/xcoder-feature-status
 install -m 0755 "$SCRIPT_DIR/xcoder-feature-stop.sh" /usr/local/bin/xcoder-feature-stop
 
-command -v xcoder >/dev/null 2>&1
+test -L /usr/local/bin/xcoder
+test -x "$XCODER_ROOT/dist/cli.js"
+test -f "$XCODER_ROOT/node_modules/playwright/package.json"
 node --check "$XCODER_ROOT/dist/cli.js"
 node --check "$XCODER_ROOT/dist/browser-worker.js"
 node --check "$XCODER_ROOT/dist/browser-tools.js"
 node --check "$XCODER_ROOT/dist/browser-record-tool.js"
-test -f "$XCODER_ROOT/node_modules/playwright/package.json"
 
 echo "[xcoder-feature] XCoder instalado em $XCODER_ROOT com permission=${PERMISSION}."
