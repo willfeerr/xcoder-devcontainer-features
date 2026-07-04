@@ -4,7 +4,7 @@ set -eu
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PERMISSION="${PERMISSION:-ask}"
 AUTOSTART="${AUTOSTART:-true}"
-XCODERREF="${XCODERREF:-release/install-without-build}"
+XCODERREF="${XCODERREF:-main}"
 BROWSERLESSREQUIRED="${BROWSERLESSREQUIRED:-true}"
 XCODER_ROOT="/opt/xcoder"
 RUNTIME_ROOT="/opt/xcoder-runtime"
@@ -56,10 +56,26 @@ git -C "$XCODER_ROOT" remote add origin https://github.com/willfeerr/xcoder.git
 git -C "$XCODER_ROOT" fetch -q --depth 1 origin "$XCODERREF"
 git -C "$XCODER_ROOT" checkout -q --detach FETCH_HEAD
 
-if [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
-  echo "[xcoder-feature] o ref $XCODERREF não contém dist/cli.js pré-compilado." >&2
+if [ ! -f "$XCODER_ROOT/package.json" ]; then
+  echo "[xcoder-feature] o ref $XCODERREF não contém package.json." >&2
   exit 1
 fi
+
+if [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
+  echo "[xcoder-feature] dist ausente no ref $XCODERREF; compilando XCoder..."
+  (
+    cd "$XCODER_ROOT"
+    npm install --include=dev --ignore-scripts --no-package-lock --no-audit --no-fund
+    npm run build
+  )
+fi
+
+if [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
+  echo "[xcoder-feature] a compilação não gerou dist/cli.js." >&2
+  exit 1
+fi
+
+rm -rf "$XCODER_ROOT/node_modules"
 
 cat > "$RUNTIME_ROOT/package.json" <<'EOF'
 {
@@ -88,7 +104,6 @@ EOF
   exit 1
 }
 
-rm -rf "$XCODER_ROOT/node_modules"
 ln -s "$RUNTIME_ROOT/node_modules" "$XCODER_ROOT/node_modules"
 
 node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
@@ -123,4 +138,4 @@ node --check "$XCODER_ROOT/dist/browser-record-tool.js"
   node --input-type=module -e "await import('playwright'); await import('ws')"
 )
 
-echo "[xcoder-feature] XCoder instalado em $XCODER_ROOT com permission=${PERMISSION}."
+echo "[xcoder-feature] XCoder instalado em $XCODER_ROOT com ref=${XCODERREF} e permission=${PERMISSION}."
