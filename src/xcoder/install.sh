@@ -6,6 +6,7 @@ PERMISSION="${PERMISSION:-ask}"
 AUTOSTART="${AUTOSTART:-true}"
 XCODERREF="${XCODERREF:-release/install-without-build}"
 BROWSERLESSREQUIRED="${BROWSERLESSREQUIRED:-true}"
+XCODER_ROOT="/opt/xcoder"
 
 case "$PERMISSION" in
   ask|auto-approve|full-control) ;;
@@ -22,7 +23,11 @@ case "$BROWSERLESSREQUIRED" in
   *) echo "[xcoder-feature] browserlessRequired deve ser true ou false." >&2; exit 1 ;;
 esac
 
-if ! command -v git >/dev/null 2>&1; then
+install_system_dependencies() {
+  if command -v git >/dev/null 2>&1; then
+    return
+  fi
+
   if command -v apt-get >/dev/null 2>&1; then
     apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git ca-certificates
@@ -39,7 +44,9 @@ if ! command -v git >/dev/null 2>&1; then
     echo "[xcoder-feature] não foi possível instalar git nesta distribuição." >&2
     exit 1
   fi
-fi
+}
+
+install_system_dependencies
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   echo "[xcoder-feature] Node.js e npm são obrigatórios." >&2
@@ -48,57 +55,33 @@ fi
 
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-npm install --global --no-audit --no-fund \
-  "github:willfeerr/xcoder#${XCODERREF}" \
-  "playwright@1.61.1"
+rm -rf "$XCODER_ROOT"
+install -d -m 0755 "$XCODER_ROOT"
+git init -q "$XCODER_ROOT"
+git -C "$XCODER_ROOT" remote add origin https://github.com/willfeerr/xcoder.git
+git -C "$XCODER_ROOT" fetch -q --depth 1 origin "$XCODERREF"
+git -C "$XCODER_ROOT" checkout -q --detach FETCH_HEAD
 
-GLOBAL_ROOT="$(npm root --global)"
-XCODER_ROOT="$(node - "$GLOBAL_ROOT" <<'NODE'
-const fs = require('node:fs');
-const path = require('node:path');
-
-const root = process.argv[2];
-const queue = [{ directory: root, depth: 0 }];
-
-while (queue.length > 0) {
-  const { directory, depth } = queue.shift();
-  const packageFile = path.join(directory, 'package.json');
-
-  if (fs.existsSync(packageFile)) {
-    try {
-      const pkg = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
-      if (pkg.name === '@skrbe/xcoder') {
-        process.stdout.write(directory);
-        process.exit(0);
-      }
-    } catch {}
-  }
-
-  if (depth >= 4) continue;
-
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name === '.bin') continue;
-    queue.push({ directory: path.join(directory, entry.name), depth: depth + 1 });
-  }
-}
-
-process.exit(1);
-NODE
-)"
-
-if [ -z "$XCODER_ROOT" ] || [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
-  echo "[xcoder-feature] @skrbe/xcoder não localizado dentro de $GLOBAL_ROOT" >&2
-  find "$GLOBAL_ROOT" -maxdepth 3 -name package.json -print >&2 || true
+if [ ! -f "$XCODER_ROOT/dist/cli.js" ]; then
+  echo "[xcoder-feature] o ref $XCODERREF não contém dist/cli.js pré-compilado." >&2
+  echo "[xcoder-feature] use release/install-without-build ou outro ref publicável." >&2
   exit 1
 fi
 
-echo "[xcoder-feature] XCoder localizado em $XCODER_ROOT"
+npm install \
+  --prefix "$XCODER_ROOT" \
+  --omit=dev \
+  --ignore-scripts \
+  --no-package-lock \
+  --no-audit \
+  --no-fund \
+  playwright@1.61.1
+
+node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
 chmod 0755 "$XCODER_ROOT/dist/cli.js"
 ln -sf "$XCODER_ROOT/dist/cli.js" /usr/local/bin/xcoder
 ln -sf "$XCODER_ROOT/dist/cli.js" /usr/local/bin/skrbe-dev-agent
-
-node "$SCRIPT_DIR/patch-xcoder.mjs" "$XCODER_ROOT" "$SCRIPT_DIR/browser-worker.mjs"
 
 install -d -m 0755 /etc/xcoder
 cat > /etc/xcoder/feature.env <<EOF
@@ -118,5 +101,6 @@ node --check "$XCODER_ROOT/dist/cli.js"
 node --check "$XCODER_ROOT/dist/browser-worker.js"
 node --check "$XCODER_ROOT/dist/browser-tools.js"
 node --check "$XCODER_ROOT/dist/browser-record-tool.js"
+test -f "$XCODER_ROOT/node_modules/playwright/package.json"
 
-echo "[xcoder-feature] XCoder instalado com Browserless remoto e permission=${PERMISSION}."
+echo "[xcoder-feature] XCoder instalado em $XCODER_ROOT com permission=${PERMISSION}."
