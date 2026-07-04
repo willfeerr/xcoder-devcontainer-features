@@ -1,6 +1,6 @@
 {
   "id": "xcoder",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "Skrbe XCoder",
   "description": "Instala o XCoder com cliente Playwright conectado a um Browserless remoto.",
   "documentationURL": "https://github.com/willfeerr/devcontainer-features/tree/main/src/xcoder",
