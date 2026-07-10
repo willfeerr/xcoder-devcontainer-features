@@ -11,6 +11,15 @@ fi
 
 PID="$(cat "$PID_FILE" 2>/dev/null || true)"
 if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+  ARGS="$(ps -o args= -p "$PID" 2>/dev/null || true)"
+  case "$ARGS" in
+    *xcoder.mjs*|*/usr/local/bin/xcoder*) ;;
+    *)
+      echo "PID $PID pertence a outro processo; recusando encerramento." >&2
+      rm -f "$PID_FILE"
+      exit 1
+      ;;
+  esac
   if kill -TERM "-$PID" 2>/dev/null; then
     :
   else
