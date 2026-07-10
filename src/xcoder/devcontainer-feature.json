@@ -31,7 +31,7 @@
     },
     "xcoderRef": {
       "type": "string",
-      "default": "a905425aeb5076894dfece0bd42b9e692f90895a",
+      "default": "99e2a29a6f87ed840efc07490efab2ec51ebe6a5",
       "description": "Tag ou commit imutável do repositório willfeerr/xcoder."
     },
     "browserMode": {

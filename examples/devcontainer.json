@@ -5,7 +5,7 @@
     "ghcr.io/willfeerr/xcoder-devcontainer-features/xcoder:1": {
       "permission": "ask",
       "autoStart": true,
-      "xcoderRef": "a905425aeb5076894dfece0bd42b9e692f90895a",
+      "xcoderRef": "99e2a29a6f87ed840efc07490efab2ec51ebe6a5",
       "browserMode": "required"
     }
   },
