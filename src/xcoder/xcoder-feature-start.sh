@@ -5,17 +5,25 @@ if [ -r /etc/xcoder/feature.env ]; then
   . /etc/xcoder/feature.env
 fi
 
-missing=""
-for name in SKRBE_BRIDGE_TOKEN; do
-  eval "value=\${$name:-}"
-  [ -n "$value" ] || missing="$missing $name"
-done
+BROWSER_MODE="${SKRBE_BROWSER_MODE:-${XCODER_BROWSER_MODE:-optional}}"
+if [ "${XCODER_BROWSERLESS_REQUIRED:-false}" = "true" ]; then
+  BROWSER_MODE="required"
+fi
+case "$BROWSER_MODE" in
+  disabled|optional|required) ;;
+  *) echo "[xcoder-feature] browser mode inválido: $BROWSER_MODE" >&2; exit 1 ;;
+esac
 
-if [ "${XCODER_BROWSERLESS_REQUIRED:-true}" = "true" ]; then
-  for name in BROWSERLESS_URL BROWSERLESS_TOKEN; do
-    eval "value=\${$name:-}"
-    [ -n "$value" ] || missing="$missing $name"
-  done
+missing=""
+[ -n "${SKRBE_BRIDGE_TOKEN:-}" ] || missing="$missing SKRBE_BRIDGE_TOKEN"
+if [ "$BROWSER_MODE" = "required" ]; then
+  [ -n "${BROWSERLESS_URL:-}" ] || missing="$missing BROWSERLESS_URL"
+  if [ -z "${BROWSERLESS_TOKEN:-}" ]; then
+    case "${BROWSERLESS_URL:-}" in
+      *[?\&]token=*) ;;
+      *) missing="$missing BROWSERLESS_TOKEN" ;;
+    esac
+  fi
 fi
 
 if [ -n "$missing" ]; then
@@ -25,6 +33,7 @@ if [ -n "$missing" ]; then
 fi
 
 export SKRBE_PERMISSION="${SKRBE_PERMISSION:-${XCODER_DEFAULT_PERMISSION:-ask}}"
+export SKRBE_BROWSER_MODE="$BROWSER_MODE"
 export SKRBE_WORKSPACE="${SKRBE_WORKSPACE:-$PWD}"
 export SKRBE_ROOTS="${SKRBE_ROOTS:-$SKRBE_WORKSPACE}"
 export SKRBE_AGENT_ID="${SKRBE_AGENT_ID:-xcoder-$(hostname)}"
@@ -44,7 +53,11 @@ is_running() {
   case "$state" in
     Z*) return 1 ;;
   esac
-  return 0
+  args="$(ps -o args= -p "$candidate" 2>/dev/null || true)"
+  case "$args" in
+    *xcoder.mjs*|*/usr/local/bin/xcoder*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 if [ -f "$PID_FILE" ]; then
@@ -62,8 +75,8 @@ if [ -z "$XCODER_BIN" ]; then
   exit 1
 fi
 
-printf '[xcoder-feature] iniciando em %s com workspace=%s\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SKRBE_WORKSPACE" >>"$LOG_FILE"
+printf '[xcoder-feature] iniciando em %s com workspace=%s browserMode=%s\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SKRBE_WORKSPACE" "$BROWSER_MODE" >>"$LOG_FILE"
 
 PID="$(
   XCODER_BIN="$XCODER_BIN" LOG_FILE="$LOG_FILE" node --input-type=module <<'NODE'
@@ -105,4 +118,4 @@ if ! is_running "$PID"; then
   exit 1
 fi
 
-echo "[xcoder-feature] XCoder iniciado em sessão destacada com PID $PID. Logs: $LOG_FILE"
+echo "[xcoder-feature] XCoder iniciado com PID $PID. Logs: $LOG_FILE"

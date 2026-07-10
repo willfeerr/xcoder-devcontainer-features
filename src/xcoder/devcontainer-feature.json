@@ -1,9 +1,9 @@
 {
   "id": "xcoder",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "name": "Skrbe XCoder",
-  "description": "Instala o XCoder com cliente Playwright conectado a um Browserless remoto.",
-  "documentationURL": "https://github.com/willfeerr/devcontainer-features/tree/main/src/xcoder",
+  "description": "Instala uma versão imutável do XCoder com Fast I/O, doctor e navegador local ou Browserless remoto.",
+  "documentationURL": "https://github.com/willfeerr/xcoder-devcontainer-features/tree/main/src/xcoder",
   "licenseURL": "https://github.com/willfeerr/xcoder/blob/main/LICENSE",
   "keywords": [
     "skrbe",
@@ -31,13 +31,23 @@
     },
     "xcoderRef": {
       "type": "string",
-      "default": "main",
-      "description": "Branch, tag ou commit do repositório willfeerr/xcoder. Refs sem dist são compilados durante a instalação."
+      "default": "99e2a29a6f87ed840efc07490efab2ec51ebe6a5",
+      "description": "Tag ou commit imutável do repositório willfeerr/xcoder."
+    },
+    "browserMode": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "optional",
+        "required"
+      ],
+      "default": "optional",
+      "description": "disabled remove tools de browser; optional mantém o core disponível sem browser; required exige configuração Browserless no launcher da Feature."
     },
     "browserlessRequired": {
       "type": "boolean",
-      "default": true,
-      "description": "Exige BROWSERLESS_URL e BROWSERLESS_TOKEN antes de iniciar o XCoder."
+      "default": false,
+      "description": "Compatibilidade com versões anteriores. Quando true, sobrescreve browserMode para required."
     }
   },
   "dependsOn": {
