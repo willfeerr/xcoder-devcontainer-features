@@ -9,14 +9,21 @@ if [ ! -f "$PID_FILE" ]; then
   exit 0
 fi
 
-PID="$(cat "$PID_FILE")"
-if kill -0 "$PID" 2>/dev/null; then
-  kill -TERM "$PID"
+PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+  if kill -TERM "-$PID" 2>/dev/null; then
+    :
+  else
+    kill -TERM "$PID" 2>/dev/null || true
+  fi
   i=0
   while kill -0 "$PID" 2>/dev/null && [ "$i" -lt 20 ]; do
     sleep 0.25
     i=$((i + 1))
   done
+  if kill -0 "$PID" 2>/dev/null; then
+    kill -KILL "-$PID" 2>/dev/null || kill -KILL "$PID" 2>/dev/null || true
+  fi
 fi
 
 rm -f "$PID_FILE"

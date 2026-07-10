@@ -2,11 +2,11 @@
   "name": "Projeto com XCoder",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    "ghcr.io/willfeerr/devcontainer-features/xcoder:1": {
+    "ghcr.io/willfeerr/xcoder-devcontainer-features/xcoder:1": {
       "permission": "ask",
       "autoStart": true,
-      "xcoderRef": "main",
-      "browserlessRequired": true
+      "xcoderRef": "a905425aeb5076894dfece0bd42b9e692f90895a",
+      "browserMode": "required"
     }
   },
   "containerEnv": {
@@ -14,6 +14,7 @@
     "SKRBE_BRIDGE_TOKEN": "${localEnv:SKRBE_BRIDGE_TOKEN}",
     "SKRBE_AGENT_ID": "${localEnv:SKRBE_AGENT_ID}",
     "BROWSERLESS_URL": "${localEnv:BROWSERLESS_URL}",
-    "BROWSERLESS_TOKEN": "${localEnv:BROWSERLESS_TOKEN}"
+    "BROWSERLESS_TOKEN": "${localEnv:BROWSERLESS_TOKEN}",
+    "SSH_AUTH_SOCK": "/tmp/host-ssh-agent.sock"
   }
 }

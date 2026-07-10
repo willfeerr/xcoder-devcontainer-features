@@ -12,22 +12,28 @@ command -v xcoder-feature-stop
 test -r /etc/xcoder/feature.env
 grep -q '^XCODER_DEFAULT_PERMISSION=' /etc/xcoder/feature.env
 grep -q '^XCODER_AUTO_START=' /etc/xcoder/feature.env
+grep -q '^XCODER_BROWSER_MODE=' /etc/xcoder/feature.env
+grep -q '^XCODER_REF=[0-9a-f]\{40\}$' /etc/xcoder/feature.env
+grep -q '^XCODER_VERSION=0.5.0$' /etc/xcoder/feature.env
 
-test -d /opt/xcoder
-test -d /opt/xcoder-runtime/node_modules/playwright
-test -d /opt/xcoder-runtime/node_modules/ws
-test -L /opt/xcoder/node_modules
-test -x /opt/xcoder/dist/cli.js
+PACKAGE_ROOT=/opt/xcoder/node_modules/@skrbe/xcoder
+test -d "$PACKAGE_ROOT"
+test -x "$PACKAGE_ROOT/bin/xcoder.mjs"
+test -f "$PACKAGE_ROOT/dist/cli.js"
+test -f "$PACKAGE_ROOT/dist/browser-worker.js"
+test -f "$PACKAGE_ROOT/dist/browser-provider.js"
 test -L /usr/local/bin/xcoder
-grep -q 'connectOverCDP' /opt/xcoder/dist/browser-worker.js
-grep -q 'BROWSERLESS_URL' /opt/xcoder/dist/browser-worker.js
+test ! -e /opt/xcoder-runtime
 
-(
-  cd /opt/xcoder
-  node --input-type=module -e "await import('playwright'); await import('ws')"
-)
+node --check "$PACKAGE_ROOT/dist/cli.js"
+node --check "$PACKAGE_ROOT/dist/browser-worker.js"
+node --check "$PACKAGE_ROOT/dist/browser-provider.js"
+grep -q 'connectOverCDP' "$PACKAGE_ROOT/dist/browser-provider.js"
 
-if find /opt/xcoder-runtime -type f -path '*/.local-browsers/*' | grep -q .; then
+SKRBE_BRIDGE_TOKEN=test SKRBE_WORKSPACE=/tmp SKRBE_BROWSER_MODE=disabled \
+  xcoder doctor --json | grep -q '"ok": true'
+
+if find /opt/xcoder -type f -path '*/.local-browsers/*' | grep -q .; then
   echo "Navegador local do Playwright encontrado." >&2
   exit 1
 fi
